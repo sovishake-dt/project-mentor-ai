@@ -1,0 +1,6 @@
+{
+  "name": "AI Project Idea Generator & Mentor",
+  "description": "Turn your skills, interests, and constraints into a realistic, innovative, technically strong final-year project.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
