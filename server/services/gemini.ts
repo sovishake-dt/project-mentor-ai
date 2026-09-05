@@ -43,11 +43,45 @@ function getErrorStatus(error: any): number | undefined {
 function isRetryableError(error: any): boolean {
   const status = getErrorStatus(error);
 
-  return status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+  return (
+    status === 408 ||
+    status === 429 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
+  );
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      const error: any = new Error(
+        `Gemini request timed out after ${timeoutMs}ms`
+      );
+
+      error.status = 504;
+
+      reject(error);
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
 }
 
 export async function generateWithGemini(
@@ -70,17 +104,23 @@ export async function generateWithGemini(
           `Gemini request: model=${model}, attempt=${attempt}`
         );
 
-        const response = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: {
-            ...(options.responseMimeType
-              ? { responseMimeType: options.responseMimeType }
-              : {}),
-            temperature: options.temperature ?? 0.7,
-            maxOutputTokens: options.maxOutputTokens ?? 4096,
-          },
-        });
+        const response = await withTimeout(
+          ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+              ...(options.responseMimeType
+                ? {
+                    responseMimeType: options.responseMimeType,
+                  }
+                : {}),
+              temperature: options.temperature ?? 0.7,
+              maxOutputTokens:
+                options.maxOutputTokens ?? 4096,
+            },
+          }),
+          15000
+        );
 
         const text = response.text;
 
@@ -88,11 +128,16 @@ export async function generateWithGemini(
           throw new Error('Gemini returned an empty response.');
         }
 
+        console.log(
+          `Gemini success: model=${model}, attempt=${attempt}`
+        );
+
         return text;
       } catch (error: any) {
         lastError = error;
 
         const status = getErrorStatus(error);
+
         const message =
           error?.message ||
           error?.error?.message ||
