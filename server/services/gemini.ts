@@ -24,7 +24,7 @@ export function getGeminiClient(): GoogleGenAI {
 }
 
 export const MODEL_FLASH = 'gemini-3.8-flash';
-export const MODEL_FALLBACK = 'gemini-2.5-flash';
+export const MODEL_FALLBACK = 'gemini-3.6-flash';
 
 type GenerateOptions = {
   responseMimeType?: string;
