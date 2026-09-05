@@ -90,9 +90,8 @@ export async function generateWithGemini(
   const ai = getGeminiClient();
 
   const models = [
-    MODEL_FLASH,
-    MODEL_FALLBACK,
-  ];
+  MODEL_FLASH,
+];
 
   let lastError: any = null;
 
